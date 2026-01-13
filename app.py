@@ -5,7 +5,7 @@ from tensorflow.keras.models import load_model
 
 st.title("Prediksi Penyakit Jantung")
 
-model = load_model("model_jantung_ann.keras")
+model = load_model("model_ann.keras")
 scaler = joblib.load("scaler.save")
 
 age = st.number_input("Umur", 1, 120)
@@ -30,3 +30,4 @@ if st.button("Prediksi"):
         st.error("Berisiko penyakit jantung")
     else:
         st.success("Tidak berisiko penyakit jantung")
+
