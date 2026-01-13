@@ -11,10 +11,10 @@ st.set_page_config(page_title="Prediksi Risiko Jantung", layout="centered")
 st.title("Prediksi Risiko Penyakit Jantung")
 
 # ===============================
-# Load model & scaler baru
+# Load model & scaler baru (11 fitur)
 # ===============================
-model = load_model("model_ann_dl_full.keras")  # model hasil training terbaru
-scaler = joblib.load("scaler_dl.save")         # scaler terbaru
+model = load_model("model_ann_dl_full.keras")  # model hasil training 11 fitur
+scaler = joblib.load("scaler_dl.save")   # scaler untuk 11 fitur
 
 # ===============================
 # Input pengguna
@@ -44,32 +44,26 @@ chol_num = {"Normal": 1, "Tinggi": 2, "Sangat Tinggi": 3}[chol]
 gluc_num = {"Normal": 1, "Tinggi": 2, "Sangat Tinggi": 3}[gluc]
 
 # ===============================
-# Feature engineering otomatis
-# ===============================
-bmi = weight / ((height / 100) ** 2)
-pulse_pressure = ap_hi - ap_lo
-mean_arterial_pressure = (ap_hi + 2 * ap_lo) / 3
-
-# ===============================
-# DataFrame sesuai urutan fitur scaler
+# Buat DataFrame sesuai urutan fitur scaler (11 fitur)
 # ===============================
 feature_names = [
-    'age_years', 'gender', 'height', 'weight', 'ap_hi', 'ap_lo',
-    'cholesterol', 'gluc', 'smoke', 'alco', 'active',
-    'bmi', 'pulse_pressure', 'mean_arterial_pressure'
+    'age_years', 'height', 'weight',
+    'ap_hi', 'ap_lo', 'gender',
+    'cholesterol', 'gluc',
+    'smoke', 'alco', 'active'
 ]
 
-data = pd.DataFrame([[  # input 14 fitur sesuai training
-    age, gender_num, height, weight, ap_hi, ap_lo,
-    chol_num, gluc_num, int(smoke), int(alco), int(active),
-    bmi, pulse_pressure, mean_arterial_pressure
+data = pd.DataFrame([[
+    age, height, weight,
+    ap_hi, ap_lo, gender_num,
+    chol_num, gluc_num,
+    int(smoke), int(alco), int(active)
 ]], columns=feature_names)
 
 # ===============================
 # Prediksi
 # ===============================
 if st.button("Prediksi"):
-    # transform menggunakan scaler terbaru
     data_scaled = scaler.transform(data.values)
     prob = model.predict(data_scaled)[0][0]
     hasil = 1 if prob >= 0.5 else 0
