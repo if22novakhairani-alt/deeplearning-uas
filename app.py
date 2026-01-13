@@ -6,7 +6,7 @@ from tensorflow.keras.models import load_model
 # ===============================
 # Load model deep learning
 # ===============================
-model = load_model("model_jantung_ann.keras")  # sesuaikan nama file
+model = load_model("model_jantung_ann.keras", compile=False)  # sesuaikan nama file
 
 st.title("Prediksi Risiko Penyakit Jantung")
 
@@ -71,4 +71,5 @@ if st.button("Prediksi"):
     if hasil == 1:
         st.error(f"Hasil: Risiko Penyakit Jantung ({prob:.2%})")
     else:
+
         st.success(f"Hasil: Sehat ({(1 - prob):.2%})")
