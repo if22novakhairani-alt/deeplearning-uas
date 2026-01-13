@@ -4,14 +4,17 @@ import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
 
+# ===============================
+# Page config & title
+# ===============================
 st.set_page_config(page_title="Prediksi Risiko Jantung", layout="centered")
-st.title("Prediksi Risiko Penyakit Jantung ❤️")
+st.title("Prediksi Risiko Penyakit Jantung")
 
 # ===============================
-# Load model dan scaler
+# Load model & scaler baru
 # ===============================
-model = load_model("model_ann_full_features.keras")
-scaler = joblib.load("scaler_full_features.save")
+model = load_model("model_ann_dl_full.keras")  # model hasil training terbaru
+scaler = joblib.load("scaler_dl.save")         # scaler terbaru
 
 # ===============================
 # Input pengguna
@@ -23,8 +26,8 @@ height = st.number_input("Tinggi Badan (cm)", 100, 250, 165)
 weight = st.number_input("Berat Badan (kg)", 30, 200, 70)
 
 st.header("Tekanan Darah & Lab")
-ap_hi = st.number_input("Tekanan Darah Sistolik (ap_hi)", 80, 200, 120)
-ap_lo = st.number_input("Tekanan Darah Diastolik (ap_lo)", 50, 150, 80)
+ap_hi = st.number_input("Tekanan Darah Sistolik", 80, 200, 120)
+ap_lo = st.number_input("Tekanan Darah Diastolik", 50, 150, 80)
 chol = st.selectbox("Kolesterol", ["Normal", "Tinggi", "Sangat Tinggi"])
 gluc = st.selectbox("Glukosa", ["Normal", "Tinggi", "Sangat Tinggi"])
 
@@ -48,7 +51,7 @@ pulse_pressure = ap_hi - ap_lo
 mean_arterial_pressure = (ap_hi + 2 * ap_lo) / 3
 
 # ===============================
-# Buat DataFrame sesuai urutan fitur scaler
+# DataFrame sesuai urutan fitur scaler
 # ===============================
 feature_names = [
     'age_years', 'gender', 'height', 'weight', 'ap_hi', 'ap_lo',
@@ -56,7 +59,7 @@ feature_names = [
     'bmi', 'pulse_pressure', 'mean_arterial_pressure'
 ]
 
-data = pd.DataFrame([[
+data = pd.DataFrame([[  # input 14 fitur sesuai training
     age, gender_num, height, weight, ap_hi, ap_lo,
     chol_num, gluc_num, int(smoke), int(alco), int(active),
     bmi, pulse_pressure, mean_arterial_pressure
@@ -66,6 +69,7 @@ data = pd.DataFrame([[
 # Prediksi
 # ===============================
 if st.button("Prediksi"):
+    # transform menggunakan scaler terbaru
     data_scaled = scaler.transform(data.values)
     prob = model.predict(data_scaled)[0][0]
     hasil = 1 if prob >= 0.5 else 0
