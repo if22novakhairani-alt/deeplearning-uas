@@ -67,7 +67,8 @@ data = pd.DataFrame([{
 # Prediksi
 # ===============================
 if st.button("Prediksi"):
-    data_scaled = scaler.transform(data)  # scaling sesuai training
+    # konversi DataFrame ke numpy array sebelum scaling
+    data_scaled = scaler.transform(data.values)
     prob = model.predict(data_scaled)[0][0]
     hasil = 1 if prob >= 0.5 else 0
 
@@ -75,3 +76,4 @@ if st.button("Prediksi"):
         st.error(f"Hasil: Risiko Penyakit Jantung ({prob:.2%})")
     else:
         st.success(f"Hasil: Sehat ({(1 - prob):.2%})")
+
