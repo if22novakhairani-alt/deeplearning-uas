@@ -13,14 +13,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.title("🫀 Prediksi Risiko Penyakit Jantung")
+st.title("Prediksi Risiko Penyakit Jantung")
 st.caption("Aplikasi berbasis Deep Learning untuk estimasi risiko penyakit jantung")
 
 # ===============================
 # Load model & scaler (11 fitur)
 # ===============================
-model = load_model("model_ann_11features.keras")
-scaler = joblib.load("scaler_11features.save")
+model = load_model("model_ann_dl_full.keras")
+scaler = joblib.load("scaler_dl.save")
 
 # ===============================
 # INPUT USER
@@ -155,3 +155,4 @@ if st.button("🔍 Prediksi Risiko", use_container_width=True):
     # ===============================
     with st.expander("📌 Detail Data yang Digunakan Model"):
         st.dataframe(data)
+
