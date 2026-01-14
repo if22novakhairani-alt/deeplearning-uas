@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
+from datetime import datetime
 from tensorflow.keras.models import load_model
 
 # ===============================
@@ -9,23 +11,29 @@ from tensorflow.keras.models import load_model
 # ===============================
 st.set_page_config(
     page_title="Prediksi Risiko Penyakit Jantung",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    layout="centered"
 )
 
 st.title("Prediksi Risiko Penyakit Jantung")
-st.caption("Aplikasi berbasis Deep Learning untuk estimasi risiko penyakit jantung")
+st.caption("Aplikasi berbasis Deep Learning dengan riwayat pasien")
 
 # ===============================
-# Load model & scaler (11 fitur)
+# Load model & scaler
 # ===============================
 model = load_model("model_ann_dl_full.keras")
 scaler = joblib.load("scaler_dl.save")
 
 # ===============================
+# File histori
+# ===============================
+HISTORY_FILE = "riwayat_pasien.csv"
+
+# ===============================
 # INPUT USER
 # ===============================
-st.header("📋 Data Pasien")
+st.header("Data Pasien")
+
+nama = st.text_input("Nama Pasien", placeholder="Masukkan nama lengkap")
 
 col1, col2 = st.columns(2)
 
@@ -41,20 +49,20 @@ with col2:
     chol = st.selectbox("Kolesterol", ["Normal", "Tinggi", "Sangat Tinggi"])
     gluc = st.selectbox("Glukosa", ["Normal", "Tinggi", "Sangat Tinggi"])
 
-st.subheader("🏃 Gaya Hidup")
+st.subheader("Gaya Hidup")
 smoke = st.checkbox("Merokok")
 alco = st.checkbox("Konsumsi Alkohol")
 active = st.checkbox("Aktif secara fisik")
 
 # ===============================
-# KONVERSI KATEGORIK → NUMERIK
+# Konversi ke numerik
 # ===============================
 gender_num = 1 if gender == "Perempuan" else 2
 chol_num = {"Normal": 1, "Tinggi": 2, "Sangat Tinggi": 3}[chol]
 gluc_num = {"Normal": 1, "Tinggi": 2, "Sangat Tinggi": 3}[gluc]
 
 # ===============================
-# DATAFRAME INPUT MODEL (11 fitur)
+# Data untuk model (11 fitur)
 # ===============================
 feature_names = [
     'age_years', 'height', 'weight',
@@ -63,7 +71,7 @@ feature_names = [
     'smoke', 'alco', 'active'
 ]
 
-data = pd.DataFrame([[
+data_model = pd.DataFrame([[
     age, height, weight,
     ap_hi, ap_lo, gender_num,
     chol_num, gluc_num,
@@ -75,84 +83,88 @@ data = pd.DataFrame([[
 # ===============================
 st.divider()
 
-if st.button("🔍 Prediksi Risiko", use_container_width=True):
+if st.button("Prediksi Risiko", use_container_width=True):
 
-    # Scaling
-    data_scaled = scaler.transform(data.values)
+    if nama.strip() == "":
+        st.error("Nama pasien wajib diisi")
+        st.stop()
+
+    # Predict
+    data_scaled = scaler.transform(data_model.values)
     prob = model.predict(data_scaled)[0][0]
 
-    # ===============================
-    # KLASIFIKASI LEVEL RISIKO
-    # ===============================
+    # Risk level
     if prob < 0.4:
         level = "Rendah"
-        color = "green"
     elif prob < 0.7:
         level = "Sedang"
-        color = "orange"
     else:
         level = "Tinggi"
-        color = "red"
-
-    st.subheader("📊 Hasil Prediksi")
-
-    st.progress(int(prob * 100))
-    st.markdown(
-        f"<h3 style='color:{color}'>Risiko {level} ({prob:.1%})</h3>",
-        unsafe_allow_html=True
-    )
 
     # ===============================
-    # ANALISIS FAKTOR RISIKO
+    # SIMPAN KE HISTORI
     # ===============================
-    st.subheader("⚠️ Faktor Risiko Terdeteksi")
+    record = {
+        "Waktu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Nama": nama,
+        "Umur": age,
+        "Jenis Kelamin": gender,
+        "Risiko (%)": round(prob * 100, 2),
+        "Level Risiko": level
+    }
 
-    risk_factors = []
+    df_new = pd.DataFrame([record])
 
-    if ap_hi >= 140 or ap_lo >= 90:
-        risk_factors.append("Tekanan darah tinggi")
-
-    if chol_num >= 2:
-        risk_factors.append("Kolesterol tinggi")
-
-    if gluc_num >= 2:
-        risk_factors.append("Glukosa darah tinggi")
-
-    if smoke:
-        risk_factors.append("Merokok")
-
-    if not active:
-        risk_factors.append("Kurang aktivitas fisik")
-
-    if risk_factors:
-        for rf in risk_factors:
-            st.warning(f"• {rf}")
+    if os.path.exists(HISTORY_FILE):
+        df_old = pd.read_csv(HISTORY_FILE)
+        df_all = pd.concat([df_old, df_new], ignore_index=True)
     else:
-        st.success("Tidak ditemukan faktor risiko utama")
+        df_all = df_new
+
+    df_all.to_csv(HISTORY_FILE, index=False)
 
     # ===============================
-    # REKOMENDASI OTOMATIS
+    # OUTPUT
     # ===============================
-    st.subheader("💡 Rekomendasi Kesehatan")
+    st.subheader(f"Hasil Prediksi untuk {nama}")
+    st.progress(int(prob * 100))
+    st.success(f"Risiko {level} ({prob:.1%})")
 
-    if "Merokok" in risk_factors:
-        st.info("🚭 Disarankan untuk berhenti merokok")
+# ===============================
+# HISTORI PASIEN
+# ===============================
+st.divider()
+st.header("Riwayat Pasien")
 
-    if "Kolesterol tinggi" in risk_factors:
-        st.info("🥗 Kurangi konsumsi makanan berlemak")
+if os.path.exists(HISTORY_FILE):
+    df_history = pd.read_csv(HISTORY_FILE)
 
-    if "Tekanan darah tinggi" in risk_factors:
-        st.info("🩺 Rutin memantau tekanan darah")
+    st.dataframe(df_history, use_container_width=True)
 
-    if "Kurang aktivitas fisik" in risk_factors:
-        st.info("🏃 Lakukan olahraga ringan secara rutin")
+    colA, colB = st.columns(2)
 
-    if not risk_factors:
-        st.info("👍 Pertahankan gaya hidup sehat Anda")
+    # Hapus satu data
+    with colA:
+        idx_delete = st.number_input(
+            "Hapus data berdasarkan nomor baris",
+            min_value=0,
+            max_value=len(df_history) - 1,
+            step=1
+        )
 
-    # ===============================
-    # DETAIL INPUT (EXPLAINABILITY)
-    # ===============================
-    with st.expander("📌 Detail Data yang Digunakan Model"):
-        st.dataframe(data)
+        if st.button("Hapus Data Terpilih"):
+            df_history.drop(index=idx_delete, inplace=True)
+            df_history.reset_index(drop=True, inplace=True)
+            df_history.to_csv(HISTORY_FILE, index=False)
+            st.success("Data berhasil dihapus")
+            st.experimental_rerun()
 
+    # Hapus semua data
+    with colB:
+        if st.button("Hapus Semua Riwayat"):
+            os.remove(HISTORY_FILE)
+            st.warning("Semua riwayat pasien telah dihapus")
+            st.experimental_rerun()
+
+else:
+    st.info("Belum ada riwayat pasien.")
